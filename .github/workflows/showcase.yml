@@ -52,7 +52,7 @@ jobs:
         run: |
           mkdir -p images
           for d in out/out-*; do
-            python .showcase/render.py "$d" .showcase/inputs images "${d#out/out-}" | tee -a images/results.txt || true
+            python .showcase/render.py "$d" .showcase/inputs images "${d#out/out-}" out/out-final | tee -a images/results.txt || true
           done
       - uses: actions/upload-artifact@v4.6.2
         with: { name: showcase-images, path: images }
