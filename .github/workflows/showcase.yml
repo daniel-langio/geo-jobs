@@ -1,0 +1,58 @@
+name: Showcase
+
+# Textures the real test datasets at several commits of the geo-jobs history and
+# renders the textured roofs on the aerial images (illustrations for the L3 thesis).
+on: workflow_dispatch
+
+jobs:
+  texture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: m1-avant,  sha: ed20ac7b }
+          - { label: m1-apres,  sha: 894996a8 }
+          - { label: m2-avant,  sha: a24b00aa }
+          - { label: m2-apres,  sha: 658bed90 }
+          - { label: final,     sha: 874525d3 }
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with: { path: harness }
+      - uses: actions/checkout@v4.1.6
+        with: { ref: "showcase-${{ matrix.label }}", path: work, fetch-depth: 1 }
+      - uses: actions/setup-java@v4.2.1
+        with: { java-version: '21', distribution: 'corretto' }
+      - name: Texture the datasets at ${{ matrix.sha }}
+        working-directory: work
+        continue-on-error: true
+        run: |
+          chmod +x gradlew .shell/publish_gen_to_maven_local.sh
+          cp ../harness/.showcase/ShowcaseTest.java src/test/java/app/bpartners/geojobs/service/cityjson/texture/
+          mkdir -p .showcase && cp -r ../harness/.showcase/inputs .showcase/
+          ./gradlew test --tests '*ShowcaseTest' -x jacocoTestReport -x jacocoTestCoverageVerification
+      - uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: out-${{ matrix.label }}
+          path: work/build/showcase
+          if-no-files-found: warn
+
+  render:
+    needs: texture
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - uses: actions/download-artifact@v4.3.0
+        with: { path: out, pattern: out-* }
+      - run: pip install pillow
+      - name: Render
+        run: |
+          mkdir -p images
+          for d in out/out-*; do
+            python .showcase/render.py "$d" .showcase/inputs images "${d#out/out-}" | tee -a images/results.txt || true
+          done
+      - uses: actions/upload-artifact@v4.6.2
+        with: { name: showcase-images, path: images }
