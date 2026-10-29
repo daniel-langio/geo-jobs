@@ -19,7 +19,7 @@ def faces(path, W, H):
         for g in o["geometry"]:
             for surf in g.get("appearance", {}).get("texture", {}).get("default", {}).get("values", []):
                 for ring in surf or []:
-                    yield [(uv[i][0] * W, (1 - uv[i][1]) * H) for i in ring[1:]]  # CityJSON: v axis points up
+                    yield [(uv[i][0] * W, (1 - uv[i][1]) * H) for i in ring]  # CityJSON: v axis points up
 
 
 for f in sorted(out.glob("*.json")):

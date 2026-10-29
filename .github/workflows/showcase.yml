@@ -47,12 +47,17 @@ jobs:
       - uses: actions/checkout@v4.1.6
       - uses: actions/download-artifact@v4.3.0
         with: { path: out, pattern: out-* }
-      - run: pip install pillow
+      - run: pip install pillow numpy mapbox_earcut
       - name: Render
         run: |
           mkdir -p images
           for d in out/out-*; do
-            python .showcase/render.py "$d" .showcase/inputs images "${d#out/out-}" out/out-final | tee -a images/results.txt || true
+            l="${d#out/out-}"
+            python .showcase/render.py "$d" .showcase/inputs images "$l" out/out-final | tee -a images/results.txt || true
+            for j in "$d"/*.json; do
+              n=$(basename "$j" .json); img=$n; [ "$n" = roof7_roofer ] && img=roof7
+              python .showcase/render3d.py "$j" ".showcase/inputs/$img.jpg" "images/${l}__${n}__3d.png" || true
+            done
           done
       - uses: actions/upload-artifact@v4.6.2
         with: { name: showcase-images, path: images }
