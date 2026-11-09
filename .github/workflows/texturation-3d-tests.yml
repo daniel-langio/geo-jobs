@@ -1,0 +1,46 @@
+name: Texturation 3D - tests du mémoire
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.title }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - title: "Texturation 3D / CityJsonTextureComputerTest : 4 jeux de données réels (France, Suisse)"
+            test: app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureComputerTest
+          - title: "Multi-CRS / CityJsonTextureDomainServiceTest : résolution du CRS (test paramétré)"
+            test: app.bpartners.geojobs.service.cityjson.texture.CityJsonTextureDomainServiceTest
+          - title: "Multi-CRS / MetadataFactoryTest : CRS écrit à la source (EPSG:2154, EPSG:2056)"
+            test: app.bpartners.geojobs.service.cityjson.factory.MetadataFactoryTest
+          - title: "Roofer / CityJSON3DBagRooferProcessorTest : conversion et réécriture du CRS"
+            test: app.bpartners.geojobs.unit.CityJSON3DBagRooferProcessorTest
+
+    env:
+      AWS_REGION: eu-west-3
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+
+      - uses: actions/setup-java@v4.2.1
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+      - run: chmod +x gradlew
+      - run: chmod +x .shell/publish_gen_to_maven_local.sh
+      # ponytail: seuil de couverture global exclu, il n'a pas de sens sur une seule classe de test
+      - run: ./gradlew test --tests '${{ matrix.test }}' -x jacocoTestCoverageVerification
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: test-report-${{ strategy.job-index }}
+          path: build/reports/tests/test
+          retention-days: 7
